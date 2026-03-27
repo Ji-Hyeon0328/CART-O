@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: isaaclab_carto
+Version: 1.0.0
+Summary: Isaac Lab extension for Spot robot navigation research.
+Author: shoko
+Author-email: shoko@ksim-mg-1
+Requires-Python: >=3.10
+Requires-Dist: torch
+Requires-Dist: numpy
+Dynamic: author
+Dynamic: author-email
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
