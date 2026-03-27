@@ -281,20 +281,32 @@ class CartoObservationsCfg:
     
     @configclass
     class SelectorObsCfg(ObservationGroupCfg):
-        reference_friction = ObservationTermCfg(
-            func=mdp.reference_friction,
-            params={"asset_cfg": SceneEntityCfg("robot")}
-        )   # 예: 4차원
+        # reference_friction = ObservationTermCfg(
+        #     func=mdp.reference_friction,
+        #     params={"asset_cfg": SceneEntityCfg("robot")}
+        # )   # 예: 4차원
 
-        base_height = ObservationTermCfg(
-            func=mdp.base_height,
-            params={"asset_cfg": SceneEntityCfg("robot")}
-        )   # 1차원
+        # base_height = ObservationTermCfg(
+        #     func=mdp.base_height,
+        #     params={"asset_cfg": SceneEntityCfg("robot")}
+        # )   # 1차원
 
-        feet_slip = ObservationTermCfg(
-            func=mdp.feet_slip_summary,#feet_slip_per_foot,
-            params={"asset_cfg": SceneEntityCfg("robot")}
+        # feet_slip = ObservationTermCfg(
+        #     func=mdp.feet_slip_summary,#feet_slip_per_foot,
+        #     params={"asset_cfg": SceneEntityCfg("robot")}
+        # )
+    
+        selector_aux = ObservationTermCfg(
+            func=mdp.selector_aux,
+            params={
+                "asset_cfg": SceneEntityCfg("robot"),
+                "foot_pattern": ".*_foot",
+            },
         )
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = True
+
     selector_aux: SelectorObsCfg = SelectorObsCfg()
     
 
@@ -324,6 +336,8 @@ class CartoObservationsCfg:
             params={"sensor_cfg": SceneEntityCfg("tiled_camera")}
         )
     depth_image: DepthObsCfg = DepthObsCfg()
+
+    
 
 @configclass
 class CartoRewardsCfg:

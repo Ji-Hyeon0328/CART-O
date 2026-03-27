@@ -1,6 +1,24 @@
 # 이 파일은 단순히 내부 함수들을 외부로 노출하는 역할을 합니다.
-from .observations import *
-from .rewards import *
+from .observations import (
+    base_height,
+    feet_slip_per_foot,
+    feet_slip_summary,
+    reference_friction, # type: ignore
+    selector_aux,
+)
+
+from .rewards import (
+    reward_velocity,
+    reward_slip,
+    reward_stability,
+    reward_energy,
+    reward_components,
+    reward_tensor,
+    combine_reward_components,
+    carto_reward_total,
+)
+
+import isaaclab.envs.mdp as mdp_base
 # Isaac Lab의 기본 MDP 함수들을 통합하여 mdp.base_lin_vel 등을 쓸 수 있게 합니다.
 
 import isaaclab.envs.mdp as mdp_base

@@ -50,7 +50,7 @@ class ObjectiveSelector(nn.Module):
         context_dim=256,
         cmd_dim=3,
         state_dim=36,
-        aux_dim=7,          # 예: friction 4 + base_height 1 + slip 4
+        aux_dim=5,          # 예: friction 4 + base_height 1 + slip 4
         output_dim=3,
         temperature=0.1,
         min_weight=0.0,
