@@ -28,15 +28,21 @@ def main():
     if args.mode == "global":
         selected = buffer.select_top_k(
             k=args.top_k,
-            ensure_success=True,
+            ensure_success=False, #False <-> True
             diversify_by_terrain=False,
             min_episode_length=args.min_episode_length,
+            min_mean_velocity=-1e9,
+            min_mean_slip=-1e9,
+            min_mean_energy=-1e9,
         )
     else:
         selected = buffer.select_top_k_per_preset(
             k_per_preset=args.k_per_preset,
-            ensure_success=True,
+            ensure_success=False, #False <-> True
             min_episode_length=args.min_episode_length,
+            min_mean_velocity=-1e9,
+            min_mean_slip=-1e9,
+            min_mean_energy=-1e9,
         )
 
     print(f"[INFO] selected {len(selected)} pseudo-expert episodes")

@@ -223,6 +223,13 @@ parser.add_argument(
     help="Terrain identifier string for pseudo-expert logging.",
 )
 
+parser.add_argument(
+    "--max-steps",
+    type=int,
+    default=0,
+    help="Maximum env steps before stopping (0 = no limit)",
+)
+
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -568,8 +575,26 @@ def main():
             pseudo_buffer.save_json(buffer_path)
             print(f"[INFO] saved pseudo buffer -> {buffer_path} ({len(pseudo_buffer)} episodes)")
 
+
+        if args.max_steps > 0 and env.common_step_counter >= args.max_steps:
+            print(f"[INFO] Reached max_steps={args.max_steps}, stopping.")
+            break
+    
+
+    pseudo_buffer.annotate_scores()
+    buffer_path = os.path.join(log_dir, "pseudo_expert_buffer.json")
+    pseudo_buffer.save_json(buffer_path)
+    print(f"[INFO] final pseudo buffer saved -> {buffer_path} ({len(pseudo_buffer)} episodes)")
+
     env.close()
 
+    # For batch data collection, Isaac Sim GUI/plugin teardown can hang.
+    # If max_steps > 0, exit the process immediately after saving.
+    if args.max_steps > 0:
+        print("[INFO] Batch/data-collection run finished. Exiting process directly.")
+        os._exit(0)
+
+    simulation_app.close()
 
 if __name__ == "__main__":
     main()
