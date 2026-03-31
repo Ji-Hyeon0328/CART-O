@@ -178,13 +178,20 @@ def main():
 
         print(f"[Epoch {epoch+1:03d}] train_loss={train_loss:.6f} | val_loss={val_loss:.6f}")
 
+        #latest_path = os.path.join(args.save_dir, "objective_selector_latest.pt")
+        best_path = os.path.join(args.save_dir, "objective_selector_best.pt")
+        best_selector_only_path = os.path.join(args.save_dir, "objective_selector_only_best.pt")
         latest_path = os.path.join(args.save_dir, "objective_selector_latest.pt")
+        latest_selector_only_path = os.path.join(args.save_dir, "objective_selector_only_latest.pt")
         torch.save(model.state_dict(), latest_path)
+        torch.save(model.selector.state_dict(), latest_selector_only_path)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(), best_path)
+            torch.save(model.selector.state_dict(), best_selector_only_path)
             print(f"[INFO] best model updated -> {best_path}")
+            print(f"[INFO] best selector-only model updated -> {best_selector_only_path}")
 
     print(f"[INFO] training complete. best_val_loss={best_val_loss:.6f}")
 

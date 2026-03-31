@@ -273,17 +273,19 @@ def maybe_load_selector_checkpoint(policy, ckpt_path: str, freeze: bool = False)
 
         # case 1: full selector state_dict only
         try:
-            policy.objective_selector.load_state_dict(ckpt, strict=False)
+            load_result = policy.objective_selector.load_state_dict(ckpt, strict=False)
         except Exception:
             # case 2: wrapped training checkpoint
             if "selector" in ckpt:
-                policy.objective_selector.load_state_dict(ckpt["selector"], strict=False)
+                load_result = policy.objective_selector.load_state_dict(ckpt["selector"], strict=False)
             elif "model_state_dict" in ckpt:
-                policy.objective_selector.load_state_dict(ckpt["model_state_dict"], strict=False)
+                load_result = policy.objective_selector.load_state_dict(ckpt["model_state_dict"], strict=False)
             else:
                 raise
 
         print(f"[INFO] Loaded selector checkpoint from: {ckpt_path}")
+        print("[INFO] selector load missing keys:", load_result.missing_keys)
+        print("[INFO] selector load unexpected keys:", load_result.unexpected_keys)
 
         if freeze:
             for p in policy.objective_selector.parameters():
@@ -349,8 +351,6 @@ def main():
 
     policy = SpotActor(num_proprio=36, num_map=187, num_actions=12).to(env.device)
     #optimizer = torch.optim.Adam(policy.parameters(), lr=3e-4)
-    trainable_params = [p for p in policy.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(trainable_params, lr=3e-4)
 
     selector_loaded = False
     if args.use_pretrained_selector:
@@ -359,6 +359,9 @@ def main():
             ckpt_path=args.selector_checkpoint,
             freeze=args.freeze_selector,
         )
+    
+    trainable_params = [p for p in policy.parameters() if p.requires_grad]
+    optimizer = torch.optim.Adam(trainable_params, lr=3e-4)
 
     pseudo_buffer = PseudoExpertBuffer(capacity=5000)
 
@@ -543,6 +546,19 @@ def main():
         # ---------------------------------------------------------------------
         if env.common_step_counter % 100 == 0:
             step = env.common_step_counter
+
+            beta_mean = beta.mean(dim=0)
+            beta_min = beta.min(dim=0).values
+            beta_max = beta.max(dim=0).values
+            beta_entropy = -torch.sum(beta * torch.log(beta + 1e-8), dim=-1).mean()
+
+            print(
+                f"[selector] step={env.common_step_counter} "
+                f"mean={beta_mean.tolist()} "
+                f"min={beta_min.tolist()} "
+                f"max={beta_max.tolist()} "
+                f"entropy={beta_entropy.item():.6f}"
+            )
 
             writer.add_scalar("Train/Loss", loss.item(), step)
             writer.add_scalar("Train/Avg_Env_Reward", rewards.mean().item(), step)

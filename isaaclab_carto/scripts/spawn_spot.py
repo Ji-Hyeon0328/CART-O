@@ -47,7 +47,7 @@ class SpotActor(nn.Module):
             context_dim=448,   # forward_latent가 반환하는 차원
             cmd_dim=3,
             state_dim=num_proprio,   # 현재 36
-            aux_dim=7,               # 현재 selector_aux: friction 4 + height 1 + slip_summary 2
+            aux_dim=5,               # 현재 selector_aux: friction 4 + height 1 + slip_summary 2 ->5
             output_dim=3,
             temperature=1.5,
             min_weight=0.02,
