@@ -58,16 +58,16 @@ class CartoSceneCfg(InteractiveSceneCfg):
             activate_contact_sensors=True,
         ),
         init_state=ArticulationCfg.InitialStateCfg(
-            pos=(0.0, 0.0, 1.0), # 착지 충격을 줄이기 위해 높이 조절
+            pos=(0.0, 0.0, 0.60), # 착지 충격을 줄이기 위해 높이 조절
             joint_pos={
-                ".*hx": 0.0, ".*hy": 0.8, ".*kn": -1.5,
+                ".*hx": 0.0, ".*hy": 0.65, ".*kn": -1.2, #0.0 0.8 -1.5
             },
         ),
         actuators={
             "legs": ImplicitActuatorCfg(
                 joint_names_expr=[".*"],
-                stiffness=180.0, # 근력 강화
-                damping=5.0,    # 진동 억제
+                stiffness=600.0, # 근력 강화 180
+                damping=60.0,    # 진동 억제 5.0
             ),
         },
     )

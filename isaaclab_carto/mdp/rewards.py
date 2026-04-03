@@ -128,6 +128,43 @@ def reward_energy(
 
     return -energy_penalty
 
+def reward_body_height_violation(env, target_height: float = 0.38, scale: float = 10.0):
+    """
+    Penalize body height below target.
+    Returns negative penalty.
+    """
+    robot = env.scene["robot"]
+    base_h = robot.data.root_pos_w[:, 2]
+    violation = torch.clamp(target_height - base_h, min=0.0)
+    return -scale * violation
+
+def reward_base_tilt_penalty(env, scale: float = 2.0):
+    """
+    Penalize roll/pitch tilt using projected gravity.
+    Returns negative penalty.
+    """
+    robot = env.scene["robot"]
+    g_proj = robot.data.projected_gravity_b  # [N, 3]
+    tilt_xy = torch.norm(g_proj[:, :2], dim=-1)
+    return -scale * tilt_xy
+
+def reward_stand_pose_penalty(
+    env,
+    hy_target: float = 0.65,
+    kn_target: float = -1.20,
+    scale: float = 0.5,
+):
+    robot = env.scene["robot"]
+    joint_pos = robot.data.joint_pos
+
+    # adjust these indices if needed after checking joint order
+    # ideally map by names once you verify the exact joint ordering
+    # here we assume all hy and kn joints can be sliced or indexed consistently
+
+    # safer version: just use all joints and penalize large deviations from default pose
+    default_joint_pos = robot.data.default_joint_pos
+    diff = joint_pos - default_joint_pos
+    return -scale * torch.sum(diff * diff, dim=-1)
 
 def reward_components(
     env: ManagerBasedRLEnv,
@@ -164,6 +201,14 @@ def reward_tensor(
         dim=-1,
     )
 
+def reward_forward_progress(env, scale: float = 5.0):
+    """
+    Small reward for forward base velocity in body/world x direction.
+    Clamp negative values so standing still is better than going backward.
+    """
+    robot = env.scene["robot"]
+    vx = robot.data.root_lin_vel_w[:, 0]
+    return scale * torch.clamp(vx, min=0.0)
 
 def combine_reward_components(
     beta_weights: torch.Tensor,

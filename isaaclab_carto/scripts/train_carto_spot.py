@@ -341,6 +341,7 @@ def estimate_success(
 
     return False
 
+
 def main():
     env_cfg = CartoEnvCfg()
     env_cfg.scene.num_envs = args.num_envs
@@ -366,6 +367,8 @@ def main():
     pseudo_buffer = PseudoExpertBuffer(capacity=5000)
 
     obs_dict, _ = env.reset()
+    
+    prev_actions=None #@@@@
 
     print("-" * 60)
     print("[INFO] CART-O training started")
@@ -387,7 +390,7 @@ def main():
     episode_return_s = torch.zeros(env.num_envs, device=env.device)
     episode_return_e = torch.zeros(env.num_envs, device=env.device)
     episode_length = torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
-
+    
     while simulation_app.is_running():
         obs_dict: Dict[str, torch.Tensor] = env.observation_manager.compute()
 
@@ -405,6 +408,23 @@ def main():
 
         ele_map = sanitize(obs_dict["elevation_map"].clone().detach()).float()
         cmd = sanitize(env.command_manager.get_command("base_velocity").clone().detach()).float()
+        
+        ##@@@@@@@@@@@@@@temporaray@@@@@@@@@@@@@@@
+        if env.common_step_counter < 50:
+            cmd = torch.zeros_like(cmd)
+        #     actions = raw_actions
+        # else:
+        #     dist = torch.distributions.Normal(raw_actions, 0.003)
+        #     sampled_actions = dist.rsample()
+        #     sampled_actions = torch.clamp(sampled_actions, min=-1.1, max=1.1)
+
+        # if prev_actions is None:
+        #     actions = sampled_actions
+        # else:
+        #     actions = 0.8 * prev_actions + 0.2 * sampled_actions
+        
+        # prev_actions = actions.detach()
+        ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
         selector_aux = selector_aux / (selector_aux.abs().mean() + 1e-6)
 
@@ -431,10 +451,11 @@ def main():
         raw_actions = policy(proprio, rgbd, ele_map, cmd, beta)
         raw_actions = torch.clamp(raw_actions, min=-1.0, max=1.0)
 
-        dist = torch.distributions.Normal(raw_actions, 0.1)
+        dist = torch.distributions.Normal(raw_actions, 0.003) #@@@ 0.1
         actions = dist.rsample()
         actions = torch.clamp(actions, min=-1.1, max=1.1)
 
+        actions = raw_actions #@@@@
         obs_dict, rewards, terminated, truncated, extras = env.step(actions.detach())
 
         # ---------------------------------------------------------------------
@@ -457,13 +478,22 @@ def main():
 
         weighted_reward = mdp.combine_reward_components(beta, reward_vec_n)
 
+        r_height = mdp.reward_body_height_violation(env)
+        r_tilt = mdp.reward_base_tilt_penalty(env)
+        r_stand = mdp.reward_stand_pose_penalty(env)
+        r_prog = mdp.reward_forward_progress(env)
+
+        fixed_shaping = r_height + 2.0*r_tilt + r_stand + 2.0*r_prog + 0.5*r_s
+        total_reward = weighted_reward + fixed_shaping
+
         episode_return_total += weighted_reward.detach()
         episode_return_v += r_v.detach()
         episode_return_s += r_s.detach()
         episode_return_e += r_e.detach()
         episode_length += 1
 
-        log_prob = dist.log_prob(actions).sum(dim=-1)
+        #@log_prob = dist.log_prob(actions).sum(dim=-1)
+        log_prob = torch.zeros(env.num_envs, device=env.device) #@@@@
 
         # if args.use_objective_selector:
         #     beta_entropy = -torch.sum(beta * torch.log(beta + 1e-8), dim=-1).mean()
@@ -475,12 +505,14 @@ def main():
         else:
             beta_entropy = torch.tensor(0.0, device=env.device)
 
-        loss = -(log_prob * weighted_reward.detach()).mean() - 0.01 * beta_entropy
+        #loss = -(log_prob * total_reward.detach()).mean() - 0.01 * beta_entropy
+        loss = -total_reward.mean() - 0.01 * beta_entropy #@@@@
 
         optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(policy.parameters(), max_norm=1.0)
-        optimizer.step()
+        if loss.requires_grad:#@@
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(policy.parameters(), max_norm=1.0)
+            optimizer.step()
 
         done = torch.logical_or(terminated, truncated)
         done_ids = torch.nonzero(done).squeeze(-1)
@@ -572,10 +604,15 @@ def main():
             writer.add_scalar("Beta/Slip", beta[:, 1].mean().item(), step)
             writer.add_scalar("Beta/Energy", beta[:, 2].mean().item(), step)
 
+            writer.add_scalar("Fixed_Shaping/BodyHeight", r_height.mean().item(), step)
+            writer.add_scalar("Fixed_Shaping/BaseTilt", r_tilt.mean().item(), step)
+            writer.add_scalar("Train/Avg_Total_Reward", total_reward.mean().item(), step)
+
             print(
                 f"[step {step}] "
                 f"loss={loss.item():.4f} | "
                 f"w_reward={weighted_reward.mean().item():.4f} | "
+                f"total_reward={total_reward.mean().item():.4f} | "
                 f"beta={beta.mean(dim=0).tolist()}"
             )
 

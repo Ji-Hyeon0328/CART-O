@@ -16,12 +16,15 @@ from .rewards import (
     reward_tensor,
     combine_reward_components,
     carto_reward_total,
+    reward_body_height_violation,
+    reward_base_tilt_penalty,
+    reward_stand_pose_penalty,
+    reward_forward_progress
 )
 
 import isaaclab.envs.mdp as mdp_base
 # Isaac Lab의 기본 MDP 함수들을 통합하여 mdp.base_lin_vel 등을 쓸 수 있게 합니다.
 
-import isaaclab.envs.mdp as mdp_base
 import torch
 from isaaclab.envs import ManagerBasedRLEnv
 from isaaclab.managers import (
