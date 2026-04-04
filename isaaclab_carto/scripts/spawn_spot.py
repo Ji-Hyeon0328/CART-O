@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from typing import Dict
 from isaaclab.app import AppLauncher
-
+from isaaclab_carto.networks.tss import TSSModule
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 SOURCE_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", "..", ".."))
@@ -25,7 +25,7 @@ from isaaclab_carto.envs.carto_env_cfg import CartoEnvCfg
 from isaaclab_carto.networks.objective_selector import ObjectiveSelector
 
 class SpotActor(nn.Module):
-    def __init__(self, num_proprio=36, num_map=187, num_actions=12):
+    def __init__(self, num_proprio=36, num_map=187, num_actions=12):#num_actions = 12 -> 8
         super().__init__()
         
         # 1. Encoders (Sv, Sm, Sp)

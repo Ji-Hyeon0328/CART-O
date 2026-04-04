@@ -453,9 +453,15 @@ def main():
 
         dist = torch.distributions.Normal(raw_actions, 0.003) #@@@ 0.1
         actions = dist.rsample()
-        actions = torch.clamp(actions, min=-1.1, max=1.1)
 
-        actions = raw_actions #@@@@
+        if prev_actions is None:
+            actions = raw_actions
+        else:
+            actions = 0.9 * prev_actions + 0.1 * raw_actions
+
+        actions = torch.clamp(actions, min=-1.0, max=1.0)
+
+        prev_actions = actions.detach()
         obs_dict, rewards, terminated, truncated, extras = env.step(actions.detach())
 
         # ---------------------------------------------------------------------
@@ -483,7 +489,8 @@ def main():
         r_stand = mdp.reward_stand_pose_penalty(env)
         r_prog = mdp.reward_forward_progress(env)
 
-        fixed_shaping = r_height + 2.0*r_tilt + r_stand + 2.0*r_prog + 0.5*r_s
+        #fixed_shaping = r_height + 2.0*r_tilt + r_stand + 2.0*r_prog + 0.5*r_s
+        fixed_shaping = r_height + 2.0 * r_tilt + r_stand + 2.0 * r_prog + 0.5 * r_s
         total_reward = weighted_reward + fixed_shaping
 
         episode_return_total += weighted_reward.detach()
@@ -595,6 +602,9 @@ def main():
             writer.add_scalar("Train/Loss", loss.item(), step)
             writer.add_scalar("Train/Avg_Env_Reward", rewards.mean().item(), step)
             writer.add_scalar("Train/Avg_Weighted_Reward", weighted_reward.mean().item(), step)
+
+            writer.add_scalar("Action/AbsMean", actions.abs().mean().item(), step)
+            writer.add_scalar("Action/RawAbsMean", raw_actions.abs().mean().item(), step)
 
             writer.add_scalar("Component_Reward/Velocity", r_v.mean().item(), step)
             writer.add_scalar("Component_Reward/Slip", r_s.mean().item(), step)
