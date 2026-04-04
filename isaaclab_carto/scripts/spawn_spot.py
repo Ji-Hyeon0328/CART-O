@@ -52,11 +52,20 @@ class SpotActor(nn.Module):
             temperature=1.5,
             min_weight=0.02,
         )
-        # 4. TSS (theta* 결정)
-        # 입력: [Sv, Sm, Sp, ct] + R = 451차원
-        self.tss = nn.Sequential(
-            nn.Linear(451, 256), nn.ReLU(),
-            nn.Linear(256, 128) # theta*: 제어 Gain, Swing Trajectory(Clearance 등)
+        # 4. TSS (sequence-based mode selection)
+        self.num_sequences = 8
+        self.theta_dim = 128
+
+        self.tss = TSSModule(
+            theta_dim=self.theta_dim,
+            state_dim=num_proprio,   # 36
+            context_dim=448,         # forward_latent output dim
+            hidden_dim=128,
+        )
+
+        # learnable sequence library (논문의 S_theta를 latent prototype으로 근사)
+        self.sequence_library = nn.Parameter(
+            torch.randn(self.num_sequences, self.theta_dim) * 0.02
         )
         
         # 5. [핵심] RL Block (최종 pi_theta* 생성)
@@ -68,7 +77,7 @@ class SpotActor(nn.Module):
             nn.Linear(256, num_actions) # 최종 관절 토크/위치 명령
         )
 
-    def forward(self, p_t, rgbd, ele_map, cmd, R):
+    def forward(self, p_t, rgbd, ele_map, cmd, R, z_t=None):
         # A. Feature Extraction & Attention
         s_v = self.cnn(rgbd.permute(0, 3, 1, 2).float() / 255.0)
         s_m = self.sel(ele_map)
@@ -87,17 +96,19 @@ class SpotActor(nn.Module):
         # # 논문에서 TSS는 사후 선택이지만, 설계도 구조상 '파라미터 결정기'로 구현
         # theta_star = self.tss(torch.cat([latent_features, R], dim=-1))
         latent_features = torch.cat([s_v, s_m, s_p, c_t], dim=-1)
-        batch_size = latent_features.shape[0]
-        #R = torch.full((batch_size, 3), 1.0 / 3.0, device=latent_features.device)
-        #R = self.objective_selector(latent_features, cmd, p_t)
-        
-        theta_star = self.tss(torch.cat([latent_features, R], dim=-1))
-        
-        # D. RL Block (Final Action)
-        # 설계도: theta* -> RL <- [R, ct, Cmd]
+
+        if z_t is None:
+            best_seq_indices, scores = self.tss(
+                sequence_library=self.sequence_library,
+                s_t=p_t,
+                c_t=latent_features,
+            )
+            theta_star = self.sequence_library[best_seq_indices]
+        else:
+            theta_star = z_t
+
         rl_input = torch.cat([theta_star, R, c_t, cmd], dim=-1)
         actions = self.rl_block(rl_input)
-        
         return actions
     
     def forward_latent(self, p_t, rgbd, ele_map, cmd):
@@ -114,6 +125,20 @@ class SpotActor(nn.Module):
         
         # C. 융합 (448차원: 128 + 64 + 128 + 128)
         return torch.cat([s_v, s_m, s_p, c_t], dim=-1)
+    
+    def select_sequence(self, p_t, rgbd, ele_map, cmd):
+        """
+        TSS가 현재 proprio/context에 맞는 sequence index와 z_t를 고른다.
+        """
+        latent_features = self.forward_latent(p_t, rgbd, ele_map, cmd)   # [N, 448]
+
+        best_seq_indices, scores = self.tss(
+            sequence_library=self.sequence_library,   # [K, 128]
+            s_t=p_t,                                  # [N, 36]
+            c_t=latent_features,                      # [N, 448]
+        )
+        z_t = self.sequence_library[best_seq_indices]  # [N, 128]
+        return z_t, best_seq_indices, scores, latent_features
 
 def main():
     parser = argparse.ArgumentParser()

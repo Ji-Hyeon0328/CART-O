@@ -230,6 +230,8 @@ parser.add_argument(
     help="Maximum env steps before stopping (0 = no limit)",
 )
 
+parser.add_argument("--disable-tss", action="store_true")
+
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -368,6 +370,11 @@ def main():
 
     obs_dict, _ = env.reset()
     
+    cached_z_t = None
+    cached_seq_idx = None
+    cached_tss_scores = None
+    tss_update_interval = 20
+
     prev_actions=None #@@@@
 
     print("-" * 60)
@@ -445,10 +452,23 @@ def main():
         else:
             beta = build_fixed_beta(env.num_envs, env.device, args.beta_preset)
 
+        # -------------------------------------------------
+        # TSS update (slow timescale)
+        # -------------------------------------------------
+        if args.disable_tss:
+            cached_z_t = torch.zeros(proprio.size(0), policy.theta_dim, device=env.device)
+            cached_seq_idx = torch.zeros(proprio.size(0), dtype=torch.long, device=env.device)
+            cached_tss_scores = None
+        else:
+            if (cached_z_t is None) or (env.common_step_counter % tss_update_interval == 0):
+                cached_z_t, cached_seq_idx, cached_tss_scores, latent_for_tss = policy.select_sequence(
+                    proprio, rgbd, ele_map, cmd
+                )
+
         # ---------------------------------------------------------------------
         # Policy forward
         # ---------------------------------------------------------------------
-        raw_actions = policy(proprio, rgbd, ele_map, cmd, beta)
+        raw_actions = policy(proprio, rgbd, ele_map, cmd, beta, cached_z_t)
         raw_actions = torch.clamp(raw_actions, min=-1.0, max=1.0)
 
         dist = torch.distributions.Normal(raw_actions, 0.003) #@@@ 0.1
@@ -598,6 +618,25 @@ def main():
                 f"max={beta_max.tolist()} "
                 f"entropy={beta_entropy.item():.6f}"
             )
+
+            if cached_seq_idx is not None:
+                writer.add_scalar("TSS/SelectedIndexMean", cached_seq_idx.float().mean().item(), step)
+
+            if cached_z_t is not None:
+                writer.add_scalar("TSS/ZMean", cached_z_t.mean().item(), step)
+                writer.add_scalar("TSS/ZStd", cached_z_t.std().item(), step)
+
+            if cached_tss_scores is not None:
+                writer.add_scalar("TSS/ScoreMean", cached_tss_scores.mean().item(), step)
+                writer.add_scalar("TSS/ScoreMaxMean", cached_tss_scores.max(dim=-1).values.mean().item(), step)
+
+            if cached_seq_idx is not None:
+                print(
+                    f"[tss] step={step} "
+                    f"selected_idx_mean={cached_seq_idx.float().mean().item():.3f} "
+                    f"z_mean={cached_z_t.mean().item():.4f} "
+                    f"z_std={cached_z_t.std().item():.4f}"
+                )
 
             writer.add_scalar("Train/Loss", loss.item(), step)
             writer.add_scalar("Train/Avg_Env_Reward", rewards.mean().item(), step)
