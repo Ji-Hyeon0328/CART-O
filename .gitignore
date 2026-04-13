@@ -4,3 +4,12 @@ logs/
 *.pt
 *.onnx
 .pytest_cache/
+
+# Spot raw / processed datasets
+data/raw/
+data/processed/
+
+# optional keep files
+!data/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
