@@ -1,0 +1,148 @@
+{
+  "stage_name": "high_level_framework_checkpoint_before_option2",
+  "dataset_root": "/home/shoko/IsaacLab/source/isaaclab_carto/data/processed/jy_run1_ros2",
+  "artifacts": {
+    "beta_analysis_pairs_csv": "/home/shoko/IsaacLab/source/isaaclab_carto/data/processed/jy_run1_ros2/beta_analysis/beta_analysis_pairs.csv",
+    "tss_ckpt": "/home/shoko/IsaacLab/source/isaaclab_carto/data/processed/jy_run1_ros2/tss_checkpoints/spot_tss_best.pt",
+    "tss_cluster_centers_csv": "/home/shoko/IsaacLab/source/isaaclab_carto/data/processed/jy_run1_ros2/tss_labels/tss_cluster_centers.csv",
+    "tss_cluster_summary_csv": "/home/shoko/IsaacLab/source/isaaclab_carto/data/processed/jy_run1_ros2/tss_labels/tss_cluster_summary.csv"
+  },
+  "preference_training": {},
+  "beta_analysis": {
+    "num_pairs": 1000,
+    "better_beta_mean": {
+      "better_beta_v": 0.30568317212164403,
+      "better_beta_h": 0.2657512218505144,
+      "better_beta_e": 0.4285656041800976
+    },
+    "better_beta_std": {
+      "better_beta_v": 0.017841182227464242,
+      "better_beta_h": 0.014521600044528576,
+      "better_beta_e": 0.032194864783524735
+    },
+    "worse_beta_mean": {
+      "worse_beta_v": 0.2578149066418409,
+      "worse_beta_h": 0.22661034394800664,
+      "worse_beta_e": 0.5155747523903846
+    },
+    "worse_beta_std": {
+      "worse_beta_v": 0.028913105938369592,
+      "worse_beta_h": 0.02346844006561114,
+      "worse_beta_e": 0.05226350708685796
+    },
+    "correlation_matrix": {
+      "better_beta_v": {
+        "better_beta_v": 1.0,
+        "better_beta_h": 0.97908,
+        "better_beta_e": -0.995779,
+        "better_J_v": 0.132884,
+        "better_J_h": -0.005085,
+        "better_J_e": -0.483668
+      },
+      "better_beta_h": {
+        "better_beta_v": 0.97908,
+        "better_beta_h": 1.0,
+        "better_beta_e": -0.993622,
+        "better_J_v": 0.120333,
+        "better_J_h": 0.009295,
+        "better_J_e": -0.459779
+      },
+      "better_beta_e": {
+        "better_beta_v": -0.995779,
+        "better_beta_h": -0.993622,
+        "better_beta_e": 1.0,
+        "better_J_v": -0.127916,
+        "better_J_h": -0.001374,
+        "better_J_e": 0.475415
+      },
+      "better_J_v": {
+        "better_beta_v": 0.132884,
+        "better_beta_h": 0.120333,
+        "better_beta_e": -0.127916,
+        "better_J_v": 1.0,
+        "better_J_h": -0.72812,
+        "better_J_e": -0.434298
+      },
+      "better_J_h": {
+        "better_beta_v": -0.005085,
+        "better_beta_h": 0.009295,
+        "better_beta_e": -0.001374,
+        "better_J_v": -0.72812,
+        "better_J_h": 1.0,
+        "better_J_e": 0.293543
+      },
+      "better_J_e": {
+        "better_beta_v": -0.483668,
+        "better_beta_h": -0.459779,
+        "better_beta_e": 0.475415,
+        "better_J_v": -0.434298,
+        "better_J_h": 0.293543,
+        "better_J_e": 1.0
+      }
+    }
+  },
+  "tss_training": {
+    "epoch": 10,
+    "train_stats": {
+      "loss": 0.5477625661719162,
+      "acc": 0.7743362831858407
+    },
+    "val_stats": {
+      "loss": 0.561281321140436,
+      "acc": 0.7596153846153846
+    }
+  },
+  "tss_clustering": {
+    "cluster_centers": [
+      {
+        "center_beta_v": 0.3193837319345821,
+        "center_beta_h": 0.2768134496408028,
+        "center_beta_e": 0.4038028165441626,
+        "cluster_id": 0
+      },
+      {
+        "center_beta_v": 0.2906613843183597,
+        "center_beta_h": 0.2536221964116866,
+        "center_beta_e": 0.4557164174580724,
+        "cluster_id": 1
+      }
+    ],
+    "cluster_summary": [
+      {
+        "cluster_id": 0,
+        "count": 523,
+        "beta_v_mean": 0.3193837319345821,
+        "beta_h_mean": 0.2768134496408028,
+        "beta_e_mean": 0.4038028165441626,
+        "beta_v_std": 0.0093547101247215,
+        "beta_h_std": 0.0081042151322093,
+        "beta_e_std": 0.0171369372754371,
+        "J_v_mean": 0.2942257303509498,
+        "J_h_mean": -2.7654833064252515,
+        "J_e_mean": -57.419966148828685,
+        "reward_mean": -23.83005750885885,
+        "margin_mean": 9.503185144573964
+      },
+      {
+        "cluster_id": 1,
+        "count": 477,
+        "beta_v_mean": 0.2906613843183597,
+        "beta_h_mean": 0.2536221964116866,
+        "beta_e_mean": 0.4557164174580724,
+        "beta_v_std": 0.0118199055153041,
+        "beta_h_std": 0.0094165814092822,
+        "beta_e_std": 0.0209964400019921,
+        "J_v_mean": 0.2777675670967974,
+        "J_h_mean": -2.757054926214478,
+        "J_e_mean": -53.38307077979642,
+        "reward_mean": -24.926419180144304,
+        "margin_mean": 8.508594884812457
+      }
+    ]
+  },
+  "notes": [
+    "This checkpoint was saved before moving from separated Objective Selector/TSS pipeline to integrated Option 2.",
+    "Preference learning used beta-dependent reward: R = beta dot J.",
+    "TSS labels were built from beta clustering with k=2."
+  ]
+}

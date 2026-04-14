@@ -125,6 +125,47 @@ def list_timestamped_files(folder: Path, suffix: str) -> tuple[np.ndarray, list[
     ts = np.asarray([int(p.stem) for p in files], dtype=np.int64)
     return ts, files
 
+def compute_effort_norm_from_proprio(proprio_seq: np.ndarray) -> np.ndarray:
+    """
+    proprio layout:
+      0:12 joint pos
+      12:24 joint vel
+      24:36 joint effort
+      36:39 base lin vel
+      39:42 base ang vel
+      42:46 contact
+      46:58 foot pos
+
+    proprio_seq: (T, 58)
+    return: (T,)
+    """
+    joint_eff = proprio_seq[:, 24:36] # (T, 12)
+    return np.linalg.norm(joint_eff, axis=-1)
+
+
+def compute_objective_components(
+    proprio_seq: np.ndarray,
+    forward_velocity_seq: np.ndarray,
+    body_height_seq: np.ndarray,
+    h_ref: float = -0.15,
+) -> np.ndarray:
+    """
+    returns:
+        J = [J_velocity, J_height, J_energy] shape (3,)
+    """
+    # J_v: forward velocity objective
+    J_v = float(np.mean(forward_velocity_seq))
+
+    # J_h: height/stability objective
+    J_h = float(-(np.mean(np.abs(body_height_seq - h_ref)) + 0.5 * np.std(body_height_seq)))
+
+    # J_e: energy objective
+    effort_norm = compute_effort_norm_from_proprio(proprio_seq)
+    J_e = float(-np.mean(effort_norm))
+
+    return np.asarray([J_v, J_h, J_e], dtype=np.float32)
+
+
 
 class SpotCartoDataset(Dataset):
     def __init__(
@@ -246,6 +287,24 @@ class SpotCartoDataset(Dataset):
             ),
         }
 
+        forward_velocity_seq = np.asarray(
+            [self.odom_df.iloc[k]["vx"] for k in range(start, end)],
+            dtype=np.float32,
+        )
+
+        body_height_seq = np.asarray(
+            [self.odom_df.iloc[k]["pz"] for k in range(start, end)],
+            dtype=np.float32,
+        )
+
+        objective_components = compute_objective_components(
+            proprio_seq=proprio_seq,
+            forward_velocity_seq=forward_velocity_seq,
+            body_height_seq=body_height_seq,
+        )
+
+
+
         #assert len(depth_path_seq) == self.seq_len, f"depth_path_seq len={len(depth_path_seq)}"
         #assert len(depth_time_seq) == self.seq_len, f"depth_time_seq len={len(depth_time_seq)}"
         #assert depth_tensor_seq.shape[0] == self.seq_len, f"depth_tensor_seq shape={depth_tensor_seq.shape}"
@@ -261,13 +320,16 @@ class SpotCartoDataset(Dataset):
             "depth_timestamps_ns": torch.tensor(depth_time_seq, dtype=torch.long),
 
             "depth": torch.from_numpy(depth_tensor_seq),
-            
+
+            "objective_components": torch.from_numpy(objective_components),
+
             "targets": {
                 "forward_velocity": torch.from_numpy(target_dict["forward_velocity"]),
                 "body_height": torch.from_numpy(target_dict["body_height"]),
                 "contact": torch.from_numpy(np.stack(contact_seq, axis=0).astype(np.float32)),
             },
 
+            
             
         }
 
@@ -281,7 +343,10 @@ if __name__ == "__main__":
         use_rgb=True,
         use_depth=True,
     )
-    #
+    
+    # for i in [0,100,500]:
+    #     print(dataset[i]["objective_components"])
+
     print("len(dataset) =", len(dataset))
 
     sample = dataset[0]
@@ -317,3 +382,9 @@ if __name__ == "__main__":
     if len(sample["depth_timestamps_ns"]) > 0:
         t_depth = sample["depth_timestamps_ns"][0].item()
         print("depth  t_ns =", t_depth, " | dt =", abs(t_anchor - t_depth) / 1e6, "ms")
+
+    print("objective_components shape =", sample["objective_components"].shape)
+    print("objective_components =", sample["objective_components"])
+    print("J_velocity =", sample["objective_components"][0].item())
+    print("J_height =", sample["objective_components"][1].item())
+    print("J_energy =", sample["objective_components"][2].item())
