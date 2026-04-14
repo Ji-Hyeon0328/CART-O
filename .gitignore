@@ -13,3 +13,8 @@ data/processed/
 !data/.gitkeep
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+
+!data/processed/jy_run1_ros2/
+!data/processed/jy_run1_ros2/highlevel_checkpoint/
+!data/processed/jy_run1_ros2/highlevel_checkpoint/*.md
+!data/processed/jy_run1_ros2/highlevel_checkpoint/*.json
