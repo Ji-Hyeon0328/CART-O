@@ -161,6 +161,7 @@ def main():
     print("[INFO]: Encoder-Planner mode")
     print("-" * 50)
 
+
     while simulation_app.is_running():
         with torch.inference_mode():
             # (1) 키보드 명령 주입 (3차원 정밀 매칭)
