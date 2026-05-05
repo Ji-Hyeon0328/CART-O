@@ -71,8 +71,12 @@ class SelectorWrapper(nn.Module):
     """
     Lightweight wrapper around ObjectiveSelector.
 
-    We only use latent + command for now.
-    proprio and aux are replaced by zeros to match existing forward signature.
+    Offline supervised training currently uses:
+    -latent
+    -command
+
+    state/aux are kept as zero placeholders only to preserve the same 
+    runtime selector signature used by SpotActor
     """
     def __init__(self, latent_dim: int, cmd_dim: int):
         super().__init__()
@@ -88,8 +92,10 @@ class SelectorWrapper(nn.Module):
     def forward(self, latent: torch.Tensor, command: torch.Tensor) -> torch.Tensor:
         batch = latent.shape[0]
 
-        dummy_state = torch.zeros(batch, 36, device=latent.device)
-        dummy_aux = torch.zeros(batch, 5, device=latent.device)
+        # We intentionally keep the selector API compatible with runtime code.
+        # For offline selector training, state/aux are zero placeholders.
+        dummy_state = torch.zeros(batch, 36, device=latent.device, dtype=latent.dtype)
+        dummy_aux = torch.zeros(batch, 5, device=latent.device, dtype=latent.dtype)
 
         beta = self.selector(latent, command, dummy_state, dummy_aux)
         return beta
